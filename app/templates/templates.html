@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Free Resume Templates{% endblock %}
+
+{% block content %}
+<section class="container section">
+    <div class="section-header">
+        <div>
+            <span class="eyebrow">Template Gallery</span>
+            <h1>Pick a free ATS-friendly resume template</h1>
+        </div>
+        <a class="button button-primary" href="/editor">Open Editor</a>
+    </div>
+
+    <div class="card-grid">
+        {% for template in templates_list %}
+        <article class="card template-card">
+            <div class="resume-mockup resume-mockup-{{ loop.index }}">
+                <div class="mockup-topbar"></div>
+                <div class="mockup-layout">
+                    <div class="mockup-left">
+                        <div class="mockup-line wide"></div>
+                        <div class="mockup-line"></div>
+                        <div class="mockup-line"></div>
+                        <div class="mockup-section-title"></div>
+                        <div class="mockup-line"></div>
+                        <div class="mockup-line"></div>
+                    </div>
+                    <div class="mockup-right">
+                        <div class="mockup-avatar"></div>
+                        <div class="mockup-line"></div>
+                        <div class="mockup-line"></div>
+                        <div class="mockup-section-title"></div>
+                        <div class="mockup-line"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="template-card-body">
+                <span class="card-badge">{{ template.category }}</span>
+                <h3>{{ template.name }}</h3>
+                <p>{{ template.description }}</p>
+            </div>
+            <a class="button button-secondary" href="/editor?template={{ template.slug }}">Use template</a>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Free ATS Resume Templates{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="container hero-grid">
+        <div>
+            <span class="eyebrow">Free AI-Powered Resume Builder</span>
+            <h1>Download a free ATS-friendly resume template in one click.</h1>
+            <p class="lead">
+                Choose a trending resume template, improve your content with AI, and export an editable DOCX file that works for job applications.
+            </p>
+            <div class="hero-actions">
+                <a class="button button-primary" href="/editor">Start Building</a>
+                <a class="button button-secondary" href="/templates">Browse Templates</a>
+            </div>
+        </div>
+        <div class="feature-panel">
+            <h2>Built for faster job applications</h2>
+            <ul class="feature-list">
+                <li>ATS-friendly template structures</li>
+                <li>AI-assisted summary and bullet rewrites</li>
+                <li>Editable DOCX downloads</li>
+                <li>Free professional and modern layouts</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<section class="container section">
+    <div class="section-header">
+        <h2>Trending free resume templates</h2>
+        <a href="/templates">View all templates</a>
+    </div>
+    <div class="card-grid">
+        {% for template in templates_list %}
+        <article class="card template-home-card">
+            <div class="home-template-accent accent-{{ loop.index }}"></div>
+            <img class="template-preview-image" src="/static/images/template-{{ loop.index }}.svg" alt="{{ template.name }} preview">
+            <span class="card-badge">{{ template.category }}</span>
+            <h3>{{ template.name }}</h3>
+            <p>{{ template.description }}</p>
+            <a class="text-link" href="/editor?template={{ template.slug }}">Use this template</a>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="container section split-section">
+    <div>
+        <h2>Why ATS-friendly matters</h2>
+        <p>
+            Recruiters and automated screeners prefer resumes with clear headings, readable spacing, and keyword-rich summaries. This app keeps the format simple and editable so you can tailor it for each application.
+        </p>
+    </div>
+    <div>
+        <h2>Free and editable</h2>
+        <p>
+            Every template in this MVP is free. You can refine your resume with AI suggestions and export a Word-compatible file for quick editing in Microsoft Word or Google Docs.
+        </p>
+    </div>
+</section>
+
+<section class="container section">
+    <div class="ats-check-wrapper card">
+        <div class="section-header">
+            <div>
+                <span class="eyebrow">Free ATS Check</span>
+                <h2>Upload your resume (PDF or DOCX) and get AI improvement instructions</h2>
+            </div>
+        </div>
+        <form id="ats-check-form" class="ats-check-form">
+            <div class="two-column">
+                <label>
+                    Target role (optional)
+                    <input type="text" name="target_role" placeholder="e.g. Python Developer, Product Manager">
+                </label>
+                <label>
+                    Resume file
+                    <input type="file" name="resume_file" id="resume_file" accept=".pdf,.docx" required>
+                </label>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="button button-primary">Run free ATS check</button>
+                <span id="ats-status" class="status-message"></span>
+            </div>
+        </form>
+        <pre id="ats-result" class="ats-result" hidden></pre>
+    </div>
+</section>
+
+<script>
+const atsForm = document.getElementById("ats-check-form");
+const atsStatus = document.getElementById("ats-status");
+const atsResult = document.getElementById("ats-result");
+
+atsForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    atsStatus.textContent = "Running ATS check...";
+    atsResult.hidden = true;
+    atsResult.textContent = "";
+
+    const fileInput = document.getElementById("resume_file");
+    const file = fileInput?.files?.[0];
+    if (!file) {
+        atsStatus.textContent = "Please upload a resume file.";
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("target_role", atsForm.target_role.value || "");
+
+    try {
+        const response = await fetch("/api/ats-check", {
+            method: "POST",
+            body: formData,
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.detail || "ATS check failed.");
+        }
+
+        atsResult.textContent = data.result;
+        atsResult.hidden = false;
+        atsStatus.textContent = "ATS check completed.";
+    } catch (error) {
+        atsStatus.textContent = error.message || "ATS check failed. Try again.";
+    }
+});
+</script>
+{% endblock %}

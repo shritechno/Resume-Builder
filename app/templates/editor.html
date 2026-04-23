@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+
+{% block title %}Resume Editor{% endblock %}
+
+{% block content %}
+<section class="container section">
+    <div class="section-header">
+        <div>
+            <span class="eyebrow">AI Resume Editor</span>
+            <h1>Create your editable resume</h1>
+        </div>
+        <a class="button button-secondary" href="/templates">Change template</a>
+    </div>
+
+    <div class="editor-layout">
+        <form id="resume-form" class="editor-form">
+            {% if not ai_configured %}
+            <div class="alert-banner">
+                AI is currently unavailable. Add <code>OPENAI_API_KEY</code> in your <code>.env</code> file and restart the app.
+            </div>
+            {% endif %}
+            <label>
+                Template
+                <select name="template_slug" id="template_slug">
+                    {% for template in templates_list %}
+                    <option value="{{ template.slug }}" {% if selected_template == template.slug %}selected{% endif %}>
+                        {{ template.name }} - {{ template.category }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </label>
+
+            <div class="two-column">
+                <label>
+                    Full name
+                    <input type="text" name="full_name" required>
+                </label>
+                <label>
+                    Email
+                    <input type="email" name="email" required>
+                </label>
+            </div>
+
+            <div class="two-column">
+                <label>
+                    Phone
+                    <input type="text" name="phone">
+                </label>
+                <label>
+                    Location
+                    <input type="text" name="location">
+                </label>
+            </div>
+
+            <label>
+                Professional summary
+                <textarea name="summary" id="summary" rows="5" placeholder="Write a short summary of your experience and goals."></textarea>
+            </label>
+            <button type="button" class="button button-secondary small-button" data-ai-action="summary" data-ai-target="summary">
+                Improve summary with AI
+            </button>
+
+            <div class="repeatable-block">
+                <div class="repeatable-header">
+                    <label class="no-input-label">Skills</label>
+                    <button type="button" class="button button-secondary small-button" id="add-skill-btn">Add more skill</button>
+                </div>
+                <div id="skills-list" class="repeatable-list">
+                    <div class="repeatable-item">
+                        <input type="text" name="skills_item" placeholder="e.g. Python, SQL, FastAPI">
+                    </div>
+                </div>
+            </div>
+
+            <div class="repeatable-block">
+                <div class="repeatable-header">
+                    <label class="no-input-label">Experience</label>
+                    <button type="button" class="button button-secondary small-button" id="add-experience-btn">Add more experience</button>
+                </div>
+                <div id="experience-list" class="repeatable-list">
+                    <div class="repeatable-item">
+                        <textarea name="experience_item" id="experience" rows="3" placeholder="e.g. Led migration project that reduced processing time by 30%."></textarea>
+                    </div>
+                </div>
+            </div>
+            <button type="button" class="button button-secondary small-button" data-ai-action="experience" data-ai-target="experience">
+                Rewrite experience with AI
+            </button>
+
+            <label>
+                Education
+                <textarea name="education" rows="4" placeholder="Enter one item per line"></textarea>
+            </label>
+
+            <label>
+                Projects
+                <textarea name="projects" rows="4" placeholder="Optional: enter one project per line"></textarea>
+            </label>
+
+            <div class="form-actions">
+                <button type="submit" class="button button-primary">One-click download</button>
+                <span id="status-message" class="status-message"></span>
+            </div>
+        </form>
+
+        <aside class="preview-panel">
+            <h2>How it works</h2>
+            <ol>
+                <li>Select a free template.</li>
+                <li>Fill in your resume details.</li>
+                <li>Use AI to improve your summary or bullet points.</li>
+                <li>Download an editable DOCX file instantly.</li>
+            </ol>
+            <p class="preview-note">
+                AI rewrite uses live model output only. Add your API key in <code>.env</code> to enable it.
+            </p>
+        </aside>
+    </div>
+</section>
+
+<script>
+const form = document.getElementById("resume-form");
+const statusMessage = document.getElementById("status-message");
+const aiConfigured = {{ "true" if ai_configured else "false" }};
+
+function splitLines(value) {
+    return value
+        .split("\\n")
+        .map((item) => item.trim())
+        .filter(Boolean);
+}
+
+function collectRepeatableValues(name) {
+    return Array.from(document.querySelectorAll(`[name="${name}"]`))
+        .map((field) => field.value.trim())
+        .filter(Boolean);
+}
+
+function addRepeatableItem(listId, fieldName, placeholder, isTextarea = false) {
+    const list = document.getElementById(listId);
+    const item = document.createElement("div");
+    item.className = "repeatable-item";
+
+    const field = document.createElement(isTextarea ? "textarea" : "input");
+    field.name = fieldName;
+    field.placeholder = placeholder;
+    if (isTextarea) {
+        field.rows = 3;
+    } else {
+        field.type = "text";
+    }
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "remove-item-btn";
+    removeBtn.textContent = "Remove";
+    removeBtn.addEventListener("click", () => item.remove());
+
+    item.appendChild(field);
+    item.appendChild(removeBtn);
+    list.appendChild(item);
+}
+
+document.getElementById("add-skill-btn").addEventListener("click", () => {
+    addRepeatableItem("skills-list", "skills_item", "e.g. Team leadership, React, Data analysis");
+});
+
+document.getElementById("add-experience-btn").addEventListener("click", () => {
+    addRepeatableItem(
+        "experience-list",
+        "experience_item",
+        "e.g. Improved dashboard performance and cut load time by 40%.",
+        true
+    );
+});
+
+async function runAI(action, targetId) {
+    if (!aiConfigured) {
+        statusMessage.textContent = "AI is not configured. Add OPENAI_API_KEY in .env.";
+        return;
+    }
+
+    const target = document.getElementById(targetId);
+    const content = target.value.trim();
+    if (!content) {
+        statusMessage.textContent = "Add some text first.";
+        return;
+    }
+
+    statusMessage.textContent = "Improving content...";
+    const response = await fetch("/api/improve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, content }),
+    });
+    if (!response.ok) {
+        const errorBody = await response.json();
+        throw new Error(errorBody.detail || "AI request failed.");
+    }
+    const data = await response.json();
+    target.value = data.result;
+    statusMessage.textContent = "AI suggestion added.";
+}
+
+document.querySelectorAll("[data-ai-action]").forEach((button) => {
+    button.addEventListener("click", async () => {
+        try {
+            await runAI(button.dataset.aiAction, button.dataset.aiTarget);
+        } catch (error) {
+            statusMessage.textContent = error.message || "AI request failed. Try again.";
+        }
+    });
+});
+
+form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    statusMessage.textContent = "Preparing download...";
+
+    const formData = new FormData(form);
+    const payload = {
+        template_slug: formData.get("template_slug"),
+        full_name: formData.get("full_name"),
+        email: formData.get("email"),
+        phone: formData.get("phone"),
+        location: formData.get("location"),
+        summary: formData.get("summary"),
+        skills: collectRepeatableValues("skills_item"),
+        experience: collectRepeatableValues("experience_item"),
+        education: splitLines(formData.get("education")),
+        projects: splitLines(formData.get("projects")),
+    };
+
+    try {
+        const response = await fetch("/api/download", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            throw new Error("Download failed");
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        const disposition = response.headers.get("Content-Disposition") || "";
+        const match = disposition.match(/filename=\"([^\"]+)\"/);
+        anchor.href = url;
+        anchor.download = match ? match[1] : "resume.docx";
+        anchor.click();
+        window.URL.revokeObjectURL(url);
+        statusMessage.textContent = "Download started.";
+    } catch (error) {
+        statusMessage.textContent = "Download failed. Check your form and try again.";
+    }
+});
+</script>
+{% endblock %}
