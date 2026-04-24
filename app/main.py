@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
 from app.models.database import Base, engine, SessionLocal
-fro app.routes.api import router as api_router
+from app.routes.api import router as api_router
 from app.routes.web import router as web_router
 from app.services.template_service import seed_templates
 
