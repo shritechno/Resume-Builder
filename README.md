@@ -29,4 +29,5 @@ Open `http://127.0.0.1:8000`.
 - `OPENAI_BASE_URL`: Optional compatible API base URL
 - `OPENAI_MODEL`: Chat model used for ATS rewrite/check features (use a low-cost model like `gpt-4o-mini`)
 
- If no API key is set, AI features return a clear configuration error.
+
+  If no API key is set, AI features return a clear configuration error.
