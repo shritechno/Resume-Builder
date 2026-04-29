@@ -23,7 +23,7 @@ async def lifespan(_: FastAPI):
 
 
 settings = get_settings()
-app = FastAPI(title=settings.app_name, lifespan=lifespan)
+app = FastAPI(title=settings.app_name, lifespan=lifespan
 app.include_router(web_router)
 app.include_router(api_router)
 
